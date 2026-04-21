@@ -1,30 +1,99 @@
 import { useAppContext } from "../context";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { fetchWithAuth } from "../api";
 
 export default function DashboardPage() {
-  const { currentUser, dashboardStats, refreshDashboardStats, runAction } = useAppContext();
+  const { currentUser, session, backups, dashboardStats, refreshDashboardStats, refreshBackups, runAction } = useAppContext();
+  const [latestLogs, setLatestLogs] = useState([]);
 
   useEffect(() => {
     if (currentUser?.type === "ADMIN") {
       refreshDashboardStats();
+      if (session) {
+        fetchWithAuth("/api/logs?limit=4", session)
+          .then((data) => setLatestLogs((data?.logs || []).slice(0, 4)))
+          .catch(() => setLatestLogs([]));
+      }
+    } else if (currentUser) {
+      refreshBackups();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (currentUser?.type !== "ADMIN") {
+  if (currentUser?.type === "COMPANY") {
+    const pendingBackups = backups.filter((backup) => backup.status === "PENDING").length;
+    const approvedBackups = backups.filter((backup) => backup.status === "APPROVED").length;
+    const submittedBackups = backups.filter((backup) => backup.status === "SUBMITTED").length;
+
     return (
-      <section className="panel">
-        <h2>Dashboard</h2>
-        <p className="muted">Use the sidebar tabs for your role-specific backup workflow.</p>
-      </section>
+      <>
+        <section className="stats-rows" aria-label="Dashboard statistics">
+          <div className="stats-row stats-row--three">
+            <article className="stat-card">
+              <span className="muted">Pending backups</span>
+              <strong>{pendingBackups}</strong>
+            </article>
+            <article className="stat-card">
+              <span className="muted">Approved backups</span>
+              <strong>{approvedBackups}</strong>
+            </article>
+            <article className="stat-card">
+              <span className="muted">Submitted backups</span>
+              <strong>{submittedBackups}</strong>
+            </article>
+          </div>
+        </section>
+        <section className="panel">
+          <h2>Company Dashboard</h2>
+          <p className="muted">Counts are based only on your company backups.</p>
+          <button
+            className="secondary"
+            onClick={() => runAction(async () => refreshBackups(), "Dashboard stats refreshed")}
+          >
+            Refresh Dashboard Stats
+          </button>
+        </section>
+      </>
     );
   }
 
-  const monthly = dashboardStats?.monthlyApprovedBackups || [];
-  const maxCount = Math.max(1, ...monthly.map((item) => item.count));
+  if (currentUser?.type === "EMPLOYEE") {
+    const approvedBackups = backups.filter((backup) => backup.status === "APPROVED").length;
+    const submittedBackups = backups.filter((backup) => backup.status === "SUBMITTED").length;
+
+    return (
+      <>
+        <section className="stats-rows" aria-label="Dashboard statistics">
+          <div className="stats-row stats-row--two">
+            <article className="stat-card">
+              <span className="muted">Approved backups</span>
+              <strong>{approvedBackups}</strong>
+            </article>
+            <article className="stat-card">
+              <span className="muted">Submitted backups</span>
+              <strong>{submittedBackups}</strong>
+            </article>
+          </div>
+        </section>
+        <section className="panel">
+          <h2>Employee Dashboard</h2>
+          <p className="muted">Approved backups are available for renewal processing.</p>
+          <button
+            className="secondary"
+            onClick={() => runAction(async () => refreshBackups(), "Dashboard stats refreshed")}
+          >
+            Refresh Dashboard Stats
+          </button>
+        </section>
+      </>
+    );
+  }
 
   return (
     <>
+      <section className="panel">
+        <h2>Admin Dashboard</h2>
+      </section>
       <section className="stats-rows" aria-label="Dashboard statistics">
         <div className="stats-row stats-row--two">
           <article className="stat-card">
@@ -36,7 +105,7 @@ export default function DashboardPage() {
             <strong>{dashboardStats?.companyCount || 0}</strong>
           </article>
         </div>
-        <div className="stats-row stats-row--three">
+        <div className="stats-row stats-row--four">
           <article className="stat-card">
             <span className="muted">Pending backups</span>
             <strong>{dashboardStats?.pendingBackups || 0}</strong>
@@ -46,6 +115,10 @@ export default function DashboardPage() {
             <strong>{dashboardStats?.approvedBackups || 0}</strong>
           </article>
           <article className="stat-card">
+            <span className="muted">Submitted backups</span>
+            <strong>{dashboardStats?.submittedBackups || 0}</strong>
+          </article>
+          <article className="stat-card">
             <span className="muted">Total backups</span>
             <strong>{dashboardStats?.totalBackups || 0}</strong>
           </article>
@@ -53,30 +126,70 @@ export default function DashboardPage() {
       </section>
 
       <section className="panel">
-        <h2>Monthly Approved Backups</h2>
-        <p className="muted">Default graph for approved status backups only.</p>
-        <div className="bar-chart">
-          {monthly.length === 0 ? (
-            <p className="muted">No approved backup data available yet.</p>
-          ) : (
-            monthly.map((item) => (
-              <div key={item.month} className="bar-item">
-                <div className="bar-label">{item.month}</div>
-                <div className="bar-track">
-                  <div className="bar-fill" style={{ width: `${(item.count / maxCount) * 100}%` }} />
-                </div>
-                <div className="bar-value">{item.count}</div>
-              </div>
-            ))
-          )}
+        <div className="panel-header-with-action">
+          <div>
+            <h2 className="panel-page-title">Latest Activity</h2>
+            <h3>Last 4 actions</h3>
+          </div>
+          <button
+            className="secondary"
+            onClick={() =>
+              runAction(async () => {
+                const data = await fetchWithAuth("/api/logs?limit=4", session);
+                setLatestLogs((data?.logs || []).slice(0, 4));
+              }, "Latest activity refreshed")
+            }
+          >
+            Refresh
+          </button>
         </div>
-        <button
-          className="secondary"
-          onClick={() => runAction(async () => refreshDashboardStats(), "Dashboard stats refreshed")}
-        >
-          Refresh Dashboard Stats
-        </button>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Performed by</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {latestLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="muted">
+                    No recent activity.
+                  </td>
+                </tr>
+              ) : (
+                latestLogs.slice(0, 4).map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      <code className="log-action">{row.action || "—"}</code>
+                    </td>
+                    <td>{formatPerformedBy(row)}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{formatTime(row.date)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
     </>
   );
+}
+
+function formatTime(ts) {
+  if (!ts) return "—";
+  try {
+    return new Date(ts).toLocaleString();
+  } catch {
+    return String(ts);
+  }
+}
+
+function formatPerformedBy(row) {
+  const p = row.performedBy;
+  if (!p || p.id == null) return "—";
+  const label = p.name || p.username || `#${p.id}`;
+  return `${label} (${p.type || "?"})`;
 }

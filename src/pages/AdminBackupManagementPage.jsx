@@ -2,6 +2,46 @@ import { useEffect, useState } from "react";
 import { fetchBackupFile, fetchWithAuth, triggerBrowserDownload, tryFileUrlFromPath } from "../api";
 import { useAppContext } from "../context";
 
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="M12 4v10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="m8.5 10.5 3.5 3.5 3.5-3.5M5 18h14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function AdminBackupManagementPage() {
   const { session, backups, refreshBackups, runAction } = useAppContext();
   const [remarksById, setRemarksById] = useState({});
@@ -54,7 +94,7 @@ export default function AdminBackupManagementPage() {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Company ID</th>
+                <th>Company</th>
                 <th>File</th>
                 <th>Remarks</th>
                 <th>Actions</th>
@@ -71,7 +111,7 @@ export default function AdminBackupManagementPage() {
                 pendingBackups.map((backup) => (
                   <tr key={backup.id}>
                     <td>{backup.id}</td>
-                    <td>{backup.company_id}</td>
+                    <td>{backup.company_name || ""}</td>
                     <td className="path-cell">{backup.file_path}</td>
                     <td>
                       <input
@@ -80,9 +120,9 @@ export default function AdminBackupManagementPage() {
                         placeholder="Required remarks"
                       />
                     </td>
-                    <td className="row">
-                      <button className="secondary" onClick={() => setSelectedBackup(backup)}>
-                        View Backup
+                    <td className="row table-actions">
+                      <button className="secondary btn-icon table-action-btn" onClick={() => setSelectedBackup(backup)} title="View">
+                        <EyeIcon />
                       </button>
                       <button onClick={() => reviewBackup(backup, "APPROVED")}>Approve</button>
                       <button className="danger" onClick={() => reviewBackup(backup, "REJECTED")}>
@@ -104,20 +144,28 @@ export default function AdminBackupManagementPage() {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Company ID</th>
+                <th>Company</th>
+                <th>Renewed By</th>
                 <th>Status</th>
                 <th>Original</th>
                 <th>Renewed</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {backups.map((backup) => (
                 <tr key={backup.id}>
                   <td>{backup.id}</td>
-                  <td>{backup.company_id}</td>
+                  <td>{backup.company_name || ""}</td>
+                  <td>{backup.renewed_by_name || ""}</td>
                   <td>{backup.status}</td>
                   <td className="path-cell">{backup.file_path}</td>
                   <td className="path-cell">{backup.renewed_file_path || "-"}</td>
+                  <td className="table-actions">
+                    <button className="secondary btn-icon table-action-btn" onClick={() => setSelectedBackup(backup)} title="View">
+                      <EyeIcon />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -128,37 +176,49 @@ export default function AdminBackupManagementPage() {
       {selectedBackup ? (
         <div className="modal-overlay" onClick={() => setSelectedBackup(null)}>
           <div className="modal-card modal-backup-detail" onClick={(event) => event.stopPropagation()}>
-            <h3>Backup #{selectedBackup.id}</h3>
+            <div className="panel-header-with-action">
+              <h3>Backup #{selectedBackup.id}</h3>
+              <button className="secondary btn-icon" onClick={() => setSelectedBackup(null)} title="Close" aria-label="Close modal">
+                <CloseIcon />
+              </button>
+            </div>
             <dl className="backup-detail-grid">
-              <dt>Company ID</dt>
-              <dd>{selectedBackup.company_id}</dd>
+              <dt>Company</dt>
+              <dd>{selectedBackup.company_name || `Company #${selectedBackup.company_id}`}</dd>
+              {selectedBackup.renewed_by ? (
+                <>
+                  <dt>Submitted by Employee</dt>
+                  <dd>{selectedBackup.renewed_by_name || `Employee #${selectedBackup.renewed_by}`}</dd>
+                </>
+              ) : null}
               <dt>Status</dt>
               <dd>{selectedBackup.status}</dd>
               <dt>Remarks</dt>
               <dd>{selectedBackup.remarks || "—"}</dd>
               <dt>Original file (server path)</dt>
               <dd>
-                <code className="path-block">{selectedBackup.file_path}</code>
+                <div className="row path-with-action">
+                  <code className="path-block">{selectedBackup.file_path}</code>
+                  <button className="secondary btn-icon" onClick={() => downloadOriginal(selectedBackup)} title="Download Company ZIP">
+                    <DownloadIcon />
+                  </button>
+                </div>
               </dd>
               <dt>Renewed file (server path)</dt>
               <dd>
-                {selectedBackup.renewed_file_path ? (
-                  <code className="path-block">{selectedBackup.renewed_file_path}</code>
-                ) : (
-                  "—"
-                )}
+                <div className="row path-with-action">
+                  <code className="path-block">{selectedBackup.renewed_file_path || "—"}</code>
+                  <button
+                    className="secondary btn-icon"
+                    disabled={!selectedBackup.renewed_file_path}
+                    onClick={() => downloadRenewed(selectedBackup)}
+                    title="Download Renewed ZIP"
+                  >
+                    <DownloadIcon />
+                  </button>
+                </div>
               </dd>
             </dl>
-            <div className="row modal-actions">
-              <button className="secondary" onClick={() => downloadOriginal(selectedBackup)}>
-                Download original from server
-              </button>
-              {selectedBackup.renewed_file_path ? (
-                <button className="secondary" onClick={() => downloadRenewed(selectedBackup)}>
-                  Download renewed from server
-                </button>
-              ) : null}
-            </div>
             <p className="muted small">
               If the browser runs on the same PC as the server, you can try opening the path directly (often blocked by
               the browser for security):
@@ -179,7 +239,6 @@ export default function AdminBackupManagementPage() {
                 </a>
               ) : null}
             </div>
-            <button onClick={() => setSelectedBackup(null)}>Close</button>
           </div>
         </div>
       ) : null}

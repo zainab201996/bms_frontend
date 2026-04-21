@@ -2,10 +2,72 @@ import { useEffect, useRef, useState } from "react";
 import { fetchBackupFile, triggerBrowserDownload, uploadZipWithAuth } from "../api";
 import { useAppContext } from "../context";
 
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        d="M15 18H5.5a1 1 0 0 1-.8-1.6l1.3-1.8V10a6 6 0 1 1 12 0v4.6l1.3 1.8a1 1 0 0 1-.8 1.6H18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="M12 4v10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="m8.5 10.5 3.5 3.5 3.5-3.5M5 18h14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function EmployeeBackupsPage() {
-  const { session, backups, refreshBackups, runAction } = useAppContext();
+  const { session, currentUser, backups, refreshBackups, runAction } = useAppContext();
   const [renewedFileById, setRenewedFileById] = useState({});
+  const [selectedBackupId, setSelectedBackupId] = useState(null);
   const fileInputRefs = useRef({});
+  const currentUserId = Number(currentUser?.id);
+  const visibleBackups = backups.filter(
+    (backup) => backup.status === "APPROVED" || Number(backup.renewed_by) === currentUserId
+  );
+  const selectedBackup = visibleBackups.find((backup) => backup.id === selectedBackupId) || null;
 
   useEffect(() => {
     refreshBackups();
@@ -36,53 +98,51 @@ export default function EmployeeBackupsPage() {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Company ID</th>
+                <th>Company</th>
+                <th>Renewed By</th>
                 <th>Status</th>
                 <th>Original path</th>
-                <th>Renewed ZIP</th>
+                <th>Renewed path</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {backups.length === 0 ? (
+              {visibleBackups.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="muted">
-                    No approved backups available.
+                  <td colSpan="7" className="muted">
+                    No approved or self-renewed backups available.
                   </td>
                 </tr>
               ) : (
-                backups.map((backup) => (
+                visibleBackups.map((backup) => (
                   <tr key={backup.id}>
                     <td>{backup.id}</td>
-                    <td>{backup.company_id}</td>
+                    <td>{backup.company_name || ""}</td>
+                    <td>{backup.renewed_by_name || ""}</td>
                     <td>{backup.status}</td>
                     <td className="path-cell">{backup.file_path}</td>
-                    <td>
-                      <input
-                        ref={(el) => {
-                          fileInputRefs.current[backup.id] = el;
-                        }}
-                        type="file"
-                        accept=".zip,application/zip"
-                        onChange={(e) => setRenewedFile(backup.id, e.target.files?.[0])}
-                      />
+                    <td className="path-cell">
+                      {backup.status === "SUBMITTED" ? (
+                        <span className="path-cell-inline">{backup.renewed_file_path || "-"}</span>
+                      ) : (
+                        <input
+                          className="path-cell-input"
+                          ref={(el) => {
+                            fileInputRefs.current[backup.id] = el;
+                          }}
+                          type="file"
+                          accept=".zip,application/zip"
+                          disabled={backup.status !== "APPROVED"}
+                          onChange={(e) => setRenewedFile(backup.id, e.target.files?.[0])}
+                        />
+                      )}
                     </td>
-                    <td className="row">
+                    <td className="row table-actions">
                       <button
-                        className="secondary"
-                        onClick={() =>
-                          runAction(async () => {
-                            const { blob, filename } = await fetchBackupFile(
-                              `/api/backups/${backup.id}/download`,
-                              session
-                            );
-                            triggerBrowserDownload(blob, filename);
-                          }, `Downloaded backup ${backup.id}`)
-                        }
-                      >
-                        Download
-                      </button>
-                      <button
+                        className="btn-icon table-action-btn"
+                        disabled={backup.status !== "APPROVED"}
+                        aria-label={`Notify company for backup ${backup.id}`}
+                        title="Notify"
                         onClick={() =>
                           runAction(async () => {
                             const file = renewedFileById[backup.id];
@@ -97,7 +157,15 @@ export default function EmployeeBackupsPage() {
                           }, `Backup ${backup.id} renewed and company notified`)
                         }
                       >
-                        Notify
+                        <BellIcon />
+                      </button>
+                      <button
+                        className="secondary btn-icon table-action-btn"
+                        aria-label={`View backup ${backup.id}`}
+                        title="View"
+                        onClick={() => setSelectedBackupId(backup.id)}
+                      >
+                        <EyeIcon />
                       </button>
                     </td>
                   </tr>
@@ -107,6 +175,73 @@ export default function EmployeeBackupsPage() {
           </table>
         </div>
       </section>
+      {selectedBackup ? (
+        <div className="modal-overlay" onClick={() => setSelectedBackupId(null)}>
+          <section className="modal-card modal-backup-detail" onClick={(e) => e.stopPropagation()}>
+            <div className="panel-header-with-action">
+              <div>
+                <h3>Backup Details #{selectedBackup.id}</h3>
+              </div>
+              <button className="secondary btn-icon" aria-label="Close modal" title="Close" onClick={() => setSelectedBackupId(null)}>
+                <CloseIcon />
+              </button>
+            </div>
+            <dl className="backup-detail-grid">
+              <dt>Status</dt>
+              <dd>{selectedBackup.status}</dd>
+              <dt>Company</dt>
+              <dd>{selectedBackup.company_name || `Company #${selectedBackup.company_id}`}</dd>
+              <dt>Submitted by Employee</dt>
+              <dd>{selectedBackup.renewed_by_name || "-"}</dd>
+              <dt>Company ZIP path</dt>
+              <dd>
+                <div className="row path-with-action">
+                  <span className="path-block">{selectedBackup.file_path}</span>
+                  <button
+                    className="secondary btn-icon"
+                    aria-label="Download company zip"
+                    title="Download Company ZIP"
+                    onClick={() =>
+                      runAction(async () => {
+                        const { blob, filename } = await fetchBackupFile(
+                          `/api/backups/${selectedBackup.id}/download`,
+                          session
+                        );
+                        triggerBrowserDownload(blob, filename);
+                      }, `Downloaded backup ${selectedBackup.id}`)
+                    }
+                  >
+                    <DownloadIcon />
+                  </button>
+                </div>
+              </dd>
+              <dt>Renewed ZIP path</dt>
+              <dd>
+                <div className="row path-with-action">
+                  <span className="path-block">{selectedBackup.renewed_file_path || "-"}</span>
+                  <button
+                    className="secondary btn-icon"
+                    aria-label="Download renewed zip"
+                    title="Download Renewed ZIP"
+                    disabled={!selectedBackup.renewed_file_path}
+                    onClick={() =>
+                      runAction(async () => {
+                        const { blob, filename } = await fetchBackupFile(
+                          `/api/backups/${selectedBackup.id}/renewed-download`,
+                          session
+                        );
+                        triggerBrowserDownload(blob, filename);
+                      }, `Downloaded renewed backup ${selectedBackup.id}`)
+                    }
+                  >
+                    <DownloadIcon />
+                  </button>
+                </div>
+              </dd>
+            </dl>
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }

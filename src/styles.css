@@ -75,7 +75,7 @@ button.danger {
 
 .sidebar h2 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1rem;
   color: #f8fbff;
   letter-spacing: 0.2px;
 }
@@ -238,6 +238,10 @@ button.danger {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.stats-row--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .stat-card {
   border-radius: 14px;
   background: linear-gradient(140deg, #1d4ed833 0%, #0ea5e91e 100%);
@@ -282,6 +286,7 @@ button.danger {
   width: 100%;
   border-collapse: collapse;
   min-width: 760px;
+  table-layout: fixed;
 }
 
 .table-wrap th,
@@ -448,9 +453,26 @@ button.btn-icon {
   height: 40px;
   padding: 0;
   border-radius: 10px;
-  font-size: 1.35rem;
-  line-height: 1;
-  font-weight: 600;
+  color: #dbe7ff;
+  border: 1px solid #4063d8;
+  background: linear-gradient(180deg, #2f4fa9 0%, #213d86 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+button.btn-icon:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+button.btn-icon:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+button.btn-icon svg {
+  display: block;
 }
 
 .modal-actions {
@@ -490,10 +512,45 @@ button.btn-icon {
   border: 1px solid #2a395a;
 }
 
+.path-with-action {
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+}
+
+.path-with-action .path-block {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.path-with-action .btn-icon {
+  flex: 0 0 auto;
+}
+
 .path-cell {
-  max-width: 280px;
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
   font-size: 0.82rem;
-  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.path-cell-inline {
+  display: block;
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.path-cell-input {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
 }
 
 .modal-links {
@@ -512,6 +569,10 @@ p.small {
 }
 
 .table-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap !important;
   white-space: nowrap;
 }
 

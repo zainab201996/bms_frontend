@@ -27,11 +27,16 @@ export function AppProvider({ children }) {
   async function refreshBackups() {
     if (!session) return;
     const data = await fetchWithAuth("/api/backups", session);
-    setBackups(data.backups || []);
+    const normalizedBackups = (data.backups || []).map((backup) => ({
+      ...backup,
+      company_name: backup.company_name ?? backup.companyName ?? null,
+      renewed_by_name: backup.renewed_by_name ?? backup.renewedByName ?? null
+    }));
+    setBackups(normalizedBackups);
   }
 
   async function refreshDashboardStats() {
-    if (!session || currentUser.type !== "ADMIN") return;
+    if (!session || currentUser?.type !== "ADMIN") return;
     const data = await fetchWithAuth("/api/dashboard-stats", session);
     setDashboardStats(data);
   }
