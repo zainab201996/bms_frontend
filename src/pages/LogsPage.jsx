@@ -39,7 +39,7 @@ export default function LogsPage() {
 
       {loadError ? <p className="muted" role="alert">{loadError}</p> : null}
 
-      <div className="table-wrap" style={{ marginTop: "12px" }}>
+      <div className="table-wrap table-wrap--spaced">
         <table>
           <thead>
             <tr>

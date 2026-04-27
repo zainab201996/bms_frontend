@@ -149,6 +149,7 @@ export default function AdminBackupManagementPage() {
                 <th>Status</th>
                 <th>Original</th>
                 <th>Renewed</th>
+                <th>Company Remarks</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -161,6 +162,7 @@ export default function AdminBackupManagementPage() {
                   <td>{backup.status}</td>
                   <td className="path-cell">{backup.file_path}</td>
                   <td className="path-cell">{backup.renewed_file_path || "-"}</td>
+                  <td>{backup.company_remarks || "-"}</td>
                   <td className="table-actions">
                     <button className="secondary btn-icon table-action-btn" onClick={() => setSelectedBackup(backup)} title="View">
                       <EyeIcon />
@@ -217,6 +219,12 @@ export default function AdminBackupManagementPage() {
                     <DownloadIcon />
                   </button>
                 </div>
+              </dd>
+              <dt>Company remarks</dt>
+              <dd>{selectedBackup.company_remarks || "—"}</dd>
+              <dt>Payment screenshot (server path)</dt>
+              <dd>
+                <code className="path-block">{selectedBackup.payment_screenshot_path || "—"}</code>
               </dd>
             </dl>
             <p className="muted small">

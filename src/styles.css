@@ -115,6 +115,7 @@ button.danger {
 
 .content {
   padding: 24px 28px 30px;
+  min-width: 0;
 }
 
 .topbar {
@@ -278,8 +279,10 @@ button.danger {
   margin-top: 10px;
   border: 1px solid #ffffff22;
   border-radius: 10px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: #0f172acc;
+  max-width: 100%;
 }
 
 .table-wrap table {
@@ -287,6 +290,10 @@ button.danger {
   border-collapse: collapse;
   min-width: 760px;
   table-layout: fixed;
+}
+
+.table-wrap--spaced {
+  margin-top: 12px;
 }
 
 .table-wrap th,
@@ -331,6 +338,30 @@ button.danger {
 .status-submitted {
   background: #3b82f630;
   color: #bfdbfe;
+}
+
+.company-stage-badge {
+  text-transform: capitalize;
+}
+
+.company-stage-onboarding {
+  background: #0ea5e936;
+  color: #bae6fd;
+}
+
+.company-stage-active {
+  background: #22c55e2a;
+  color: #86efac;
+}
+
+.company-stage-payment_pending {
+  background: #f59e0b2a;
+  color: #fcd34d;
+}
+
+.company-stage-suspended {
+  background: #ef44442b;
+  color: #fca5a5;
 }
 
 .muted {

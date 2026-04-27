@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import UserManagementPage from "./pages/UserManagementPage";
+import AdminCompaniesPage from "./pages/AdminCompaniesPage";
 import AdminBackupManagementPage from "./pages/AdminBackupManagementPage";
 import EmployeeBackupsPage from "./pages/EmployeeBackupsPage";
 import CompanyBackupManagementPage from "./pages/CompanyBackupManagementPage";
@@ -28,6 +29,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={["ADMIN"]}>
             <UserManagementPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "admin-companies",
+        element: (
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AdminCompaniesPage />
           </ProtectedRoute>
         )
       },

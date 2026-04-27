@@ -1,6 +1,6 @@
-import { createContext, useContext, useMemo, useState, useTransition } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useTransition } from "react";
 import { fetchWithAuth, loginRequest } from "./api";
-import { clearSession, loadStoredSession, saveSession } from "./authStorage";
+import { clearSession, loadStoredSession, saveSession, SESSION_KEY } from "./authStorage";
 
 const AppContext = createContext(null);
 
@@ -23,6 +23,18 @@ export function AppProvider({ children }) {
     if (!currentUser || !authToken) return null;
     return { user: currentUser, token: authToken };
   }, [currentUser, authToken]);
+
+  useEffect(() => {
+    function syncSessionFromStorage(event) {
+      if (event.key !== SESSION_KEY) return;
+      const stored = loadStoredSession();
+      setCurrentUser(stored?.user ?? null);
+      setAuthToken(stored?.token ?? null);
+    }
+
+    window.addEventListener("storage", syncSessionFromStorage);
+    return () => window.removeEventListener("storage", syncSessionFromStorage);
+  }, []);
 
   async function refreshBackups() {
     if (!session) return;

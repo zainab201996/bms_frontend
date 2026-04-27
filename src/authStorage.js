@@ -1,4 +1,4 @@
-const SESSION_KEY = "bms_session";
+export const SESSION_KEY = "bms_session";
 
 function isJwtExpired(token) {
   try {

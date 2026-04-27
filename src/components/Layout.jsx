@@ -20,6 +20,7 @@ export default function Layout() {
           <nav className="nav">
             <NavLink to="/">Overview Dashboard</NavLink>
             {isAdmin ? <NavLink to="/user-management">User Management</NavLink> : null}
+            {isAdmin ? <NavLink to="/admin-companies">Companies</NavLink> : null}
             {isAdmin ? <NavLink to="/admin-backup-management">Backup Management</NavLink> : null}
             {isAdmin ? <NavLink to="/activity-logs">Activity Logs</NavLink> : null}
             {isEmployee ? <NavLink to="/employee-backups">Backups</NavLink> : null}

@@ -45,7 +45,10 @@ function CloseIcon() {
 export default function CompanyBackupManagementPage() {
   const { session, backups, refreshBackups, runAction } = useAppContext();
   const fileInputRef = useRef(null);
+  const paymentInputRef = useRef(null);
   const [pendingFile, setPendingFile] = useState(null);
+  const [paymentScreenshot, setPaymentScreenshot] = useState(null);
+  const [remarks, setRemarks] = useState("");
   const [selectedBackupId, setSelectedBackupId] = useState(null);
   const selectedBackup = backups.find((backup) => backup.id === selectedBackupId) || null;
 
@@ -69,15 +72,32 @@ export default function CompanyBackupManagementPage() {
             accept=".zip,application/zip"
             onChange={(e) => setPendingFile(e.target.files?.[0] ?? null)}
           />
+          <input
+            ref={paymentInputRef}
+            type="file"
+            accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+            onChange={(e) => setPaymentScreenshot(e.target.files?.[0] ?? null)}
+          />
+          <input
+            type="text"
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+            placeholder="Upload remarks"
+          />
           <button
             onClick={() =>
               runAction(async () => {
                 if (!pendingFile) throw new Error("Please choose a ZIP file");
                 const formData = new FormData();
                 formData.append("file", pendingFile);
+                if (paymentScreenshot) formData.append("paymentScreenshot", paymentScreenshot);
+                formData.append("remarks", remarks.trim());
                 await uploadZipWithAuth("/api/backups", session, formData);
                 setPendingFile(null);
+                setPaymentScreenshot(null);
+                setRemarks("");
                 if (fileInputRef.current) fileInputRef.current.value = "";
+                if (paymentInputRef.current) paymentInputRef.current.value = "";
                 await refreshBackups();
               }, "Backup uploaded and marked as PENDING")
             }
@@ -99,14 +119,15 @@ export default function CompanyBackupManagementPage() {
                 <th>Status</th>
                 <th>Original</th>
                 <th>Renewed</th>
-                <th>Remarks</th>
+                <th>Admin Remarks</th>
+                <th>Company Remarks</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {backups.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="muted">
+                  <td colSpan="9" className="muted">
                     No backups uploaded yet.
                   </td>
                 </tr>
@@ -120,6 +141,7 @@ export default function CompanyBackupManagementPage() {
                     <td className="path-cell">{backup.file_path}</td>
                     <td className="path-cell">{backup.renewed_file_path || "-"}</td>
                     <td>{backup.remarks || "-"}</td>
+                    <td>{backup.company_remarks || "-"}</td>
                     <td className="table-actions">
                       <button
                         className="secondary btn-icon table-action-btn"
@@ -200,6 +222,12 @@ export default function CompanyBackupManagementPage() {
                     <DownloadIcon />
                   </button>
                 </div>
+              </dd>
+              <dt>Company Remarks</dt>
+              <dd>{selectedBackup.company_remarks || "-"}</dd>
+              <dt>Payment Screenshot Path</dt>
+              <dd>
+                <span className="path-block">{selectedBackup.payment_screenshot_path || "-"}</span>
               </dd>
             </dl>
           </section>

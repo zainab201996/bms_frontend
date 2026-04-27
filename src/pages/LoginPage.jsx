@@ -38,6 +38,10 @@ export default function LoginPage() {
       <section className="login-card">
         <h1>Renewal Portal Login</h1>
         <p className="muted">Use your account username and password. This is not an email login.</p>
+        <p className="muted small">
+          This browser profile keeps one active login at a time. Use an incognito window or another browser profile to
+          test multiple roles simultaneously.
+        </p>
         <form
           onSubmit={onSubmit}
           className="form-grid"
