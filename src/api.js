@@ -1,5 +1,17 @@
 const API_BASE = "http://localhost:5000";
 
+function markAndNotifyApiError(error) {
+  if (!error || typeof error !== "object") return;
+  error.__apiNotified = true;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("bms:api-error", {
+        detail: { message: error.message || "Request failed" }
+      })
+    );
+  }
+}
+
 export async function loginRequest({ username, password }) {
   const response = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
@@ -9,7 +21,9 @@ export async function loginRequest({ username, password }) {
 
   const json = await response.json();
   if (!response.ok) {
-    throw new Error(json.error || "Login failed");
+    const error = new Error(json.error || "Login failed");
+    markAndNotifyApiError(error);
+    throw error;
   }
   if (!json.user || !json.token) {
     throw new Error("Invalid login response");
@@ -42,7 +56,9 @@ export async function fetchWithAuth(path, session, options = {}) {
         /* non-JSON error body */
       }
     }
-    throw new Error(message);
+    const error = new Error(message);
+    markAndNotifyApiError(error);
+    throw error;
   }
 
   if (!text || response.status === 204) {
@@ -70,15 +86,24 @@ export async function uploadZipWithAuth(path, session, formData) {
   });
   const json = await response.json();
   if (!response.ok) {
-    throw new Error(json.error || "Upload failed");
+    const error = new Error(json.error || "Upload failed");
+    markAndNotifyApiError(error);
+    throw error;
   }
   return json;
 }
 
+function filenameFromAbsolutePath(absolutePath) {
+  if (!absolutePath || typeof absolutePath !== "string") return null;
+  const normalized = absolutePath.replace(/\\/g, "/");
+  const name = normalized.split("/").pop();
+  return name || null;
+}
+
 /**
- * Download a backup file (original or renewed). Returns blob + suggested filename.
+ * Download a backup/attachment file. Returns blob + suggested filename.
  */
-export async function fetchBackupFile(path, session) {
+export async function fetchBackupFile(path, session, options = {}) {
   if (!session?.user || !session?.token) throw new Error("Please login first");
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -87,11 +112,13 @@ export async function fetchBackupFile(path, session) {
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "Download failed");
+    const error = new Error(err.error || "Download failed");
+    markAndNotifyApiError(error);
+    throw error;
   }
   const blob = await response.blob();
   const cd = response.headers.get("Content-Disposition");
-  let filename = "backup.zip";
+  let filename = options.defaultFilename || "backup.zip";
   if (cd) {
     const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(cd);
     const ascii = /filename="([^"]+)"/i.exec(cd);
@@ -103,6 +130,10 @@ export async function fetchBackupFile(path, session) {
     } catch {
       /* keep default */
     }
+  }
+  if (!cd && options.fallbackPath) {
+    const fromPath = filenameFromAbsolutePath(options.fallbackPath);
+    if (fromPath) filename = fromPath;
   }
   return { blob, filename };
 }

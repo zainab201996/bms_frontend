@@ -3,6 +3,8 @@ import { fetchWithAuth } from "../api";
 import { useAppContext } from "../context";
 import CredentialsToast from "../components/CredentialsToast";
 
+const COMPANY_STAGES = ["ONBOARDING", "ACTIVE", "PAYMENT_PENDING", "SUSPENDED"];
+
 export default function UserManagementPage() {
   const {
     currentUser,
@@ -18,6 +20,12 @@ export default function UserManagementPage() {
   const [createUserType, setCreateUserType] = useState("EMPLOYEE");
   const [employeeName, setEmployeeName] = useState("");
   const [employeeEmail, setEmployeeEmail] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [companyEmail, setCompanyEmail] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
+  const [companySoftwareTypes, setCompanySoftwareTypes] = useState("");
+  const [companyStage, setCompanyStage] = useState("ONBOARDING");
+  const [companyCreateMode, setCompanyCreateMode] = useState("FORM");
   const [companyCsvFile, setCompanyCsvFile] = useState(null);
   const [csvInputKey, setCsvInputKey] = useState(0);
   const [credentialsToast, setCredentialsToast] = useState(null);
@@ -48,6 +56,12 @@ export default function UserManagementPage() {
     setCreateUserType("EMPLOYEE");
     setEmployeeName("");
     setEmployeeEmail("");
+    setCompanyName("");
+    setCompanyEmail("");
+    setCompanyAddress("");
+    setCompanySoftwareTypes("");
+    setCompanyStage("ONBOARDING");
+    setCompanyCreateMode("FORM");
     setCompanyCsvFile(null);
     setCsvInputKey((k) => k + 1);
     setCreateModalOpen(true);
@@ -102,6 +116,33 @@ export default function UserManagementPage() {
       await refreshManagedUsers();
       closeCreateModal();
     }, "Company users created from CSV");
+  }
+
+  function createCompanyInModal() {
+    runAction(async () => {
+      const response = await fetchWithAuth("/api/users/companies", session, {
+        method: "POST",
+        body: JSON.stringify({
+          name: companyName,
+          email: companyEmail,
+          location: companyAddress,
+          software_types: companySoftwareTypes,
+          company_stage: companyStage
+        })
+      });
+      setLatestCredentials([response.user]);
+      setCredentialsToast({
+        title: "Company user created",
+        users: [response.user]
+      });
+      setCompanyName("");
+      setCompanyEmail("");
+      setCompanyAddress("");
+      setCompanySoftwareTypes("");
+      setCompanyStage("ONBOARDING");
+      await refreshManagedUsers();
+      closeCreateModal();
+    }, "Company user created");
   }
 
   function openEdit(user) {
@@ -195,7 +236,7 @@ export default function UserManagementPage() {
                       <td>{user.name}</td>
                       <td>{user.email}</td>
                       <td>{user.type}</td>
-                      <td>{user.username}</td>
+                      <td className="username-cell">{user.username}</td>
                       <td>{user.location || "-"}</td>
                       <td className="table-actions">
                         <button type="button" className="secondary table-action-btn" onClick={() => openEdit(user)}>
@@ -247,7 +288,7 @@ export default function UserManagementPage() {
                     <td>{user.name}</td>
                     <td>{user.email}</td>
                     <td>{user.type}</td>
-                    <td>{user.username}</td>
+                    <td className="username-cell">{user.username}</td>
                     <td>{user.password}</td>
                   </tr>
                 ))
@@ -301,17 +342,79 @@ export default function UserManagementPage() {
                 </>
               ) : (
                 <>
-                  <p className="small span-full">
-                    CSV headers: <code>company_name,email,address</code>
-                  </p>
-                  <label htmlFor="companyCsv">CSV file</label>
-                  <input
-                    key={csvInputKey}
-                    id="companyCsv"
-                    type="file"
-                    accept=".csv,text/csv"
-                    onChange={(e) => setCompanyCsvFile(e.target.files?.[0] || null)}
-                  />
+                  <label htmlFor="companyCreateMode">Company create mode</label>
+                  <select
+                    id="companyCreateMode"
+                    value={companyCreateMode}
+                    onChange={(e) => setCompanyCreateMode(e.target.value)}
+                  >
+                    <option value="FORM">Single company form</option>
+                    <option value="CSV">CSV bulk upload</option>
+                  </select>
+
+                  {companyCreateMode === "FORM" ? (
+                    <>
+                      <label htmlFor="companyName">Company name</label>
+                      <input
+                        id="companyName"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="ABC Software House"
+                      />
+
+                      <label htmlFor="companyEmail">Company email</label>
+                      <input
+                        id="companyEmail"
+                        type="email"
+                        value={companyEmail}
+                        onChange={(e) => setCompanyEmail(e.target.value)}
+                        placeholder="it@abc.com"
+                      />
+
+                      <label htmlFor="companyAddress">Address</label>
+                      <input
+                        id="companyAddress"
+                        value={companyAddress}
+                        onChange={(e) => setCompanyAddress(e.target.value)}
+                        placeholder="Lahore, Pakistan"
+                      />
+
+                      <label htmlFor="companySoftwareTypes">Software types</label>
+                      <input
+                        id="companySoftwareTypes"
+                        value={companySoftwareTypes}
+                        onChange={(e) => setCompanySoftwareTypes(e.target.value)}
+                        placeholder="QuickBooks, Peachtree"
+                      />
+
+                      <label htmlFor="companyStage">Company stage</label>
+                      <select
+                        id="companyStage"
+                        value={companyStage}
+                        onChange={(e) => setCompanyStage(e.target.value)}
+                      >
+                        {COMPANY_STAGES.map((stage) => (
+                          <option key={stage} value={stage}>
+                            {stage}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  ) : (
+                    <>
+                      <p className="small span-full">
+                        CSV headers: <code>company_name,email,address,software_types,company_stage</code>
+                      </p>
+                      <label htmlFor="companyCsv">CSV file</label>
+                      <input
+                        key={csvInputKey}
+                        id="companyCsv"
+                        type="file"
+                        accept=".csv,text/csv"
+                        onChange={(e) => setCompanyCsvFile(e.target.files?.[0] || null)}
+                      />
+                    </>
+                  )}
                 </>
               )}
               <div className="row modal-actions span-full">
@@ -320,9 +423,17 @@ export default function UserManagementPage() {
                     Create employee
                   </button>
                 ) : (
-                  <button type="button" onClick={createCompaniesFromCsvInModal}>
-                    Upload CSV and create companies
-                  </button>
+                  <>
+                    {companyCreateMode === "FORM" ? (
+                      <button type="button" onClick={createCompanyInModal}>
+                        Create company
+                      </button>
+                    ) : (
+                      <button type="button" onClick={createCompaniesFromCsvInModal}>
+                        Upload CSV and create companies
+                      </button>
+                    )}
+                  </>
                 )}
                 <button type="button" className="secondary" onClick={closeCreateModal}>
                   Cancel

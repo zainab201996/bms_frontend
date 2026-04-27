@@ -17,6 +17,7 @@ export function AppProvider({ children }) {
   const [managedUsers, setManagedUsers] = useState([]);
   const [latestCredentials, setLatestCredentials] = useState([]);
   const [statusMessage, setStatusMessage] = useState("");
+  const [appToast, setAppToast] = useState(null);
   const [isPending, startTransition] = useTransition();
 
   const session = useMemo(() => {
@@ -35,6 +36,21 @@ export function AppProvider({ children }) {
     window.addEventListener("storage", syncSessionFromStorage);
     return () => window.removeEventListener("storage", syncSessionFromStorage);
   }, []);
+
+  useEffect(() => {
+    function handleGlobalApiError(event) {
+      const message = event?.detail?.message || "Request failed";
+      setAppToast({ variant: "error", message });
+    }
+    window.addEventListener("bms:api-error", handleGlobalApiError);
+    return () => window.removeEventListener("bms:api-error", handleGlobalApiError);
+  }, []);
+
+  useEffect(() => {
+    if (!appToast) return;
+    const timer = setTimeout(() => setAppToast(null), 5000);
+    return () => clearTimeout(timer);
+  }, [appToast]);
 
   async function refreshBackups() {
     if (!session) return;
@@ -84,8 +100,10 @@ export function AppProvider({ children }) {
       try {
         await action();
         setStatusMessage(successText);
+        if (successText) setAppToast({ variant: "success", message: successText });
       } catch (error) {
         setStatusMessage(error.message);
+        setAppToast({ variant: "error", message: error?.message || "Action failed" });
       }
     });
   }
@@ -105,6 +123,8 @@ export function AppProvider({ children }) {
     refreshDashboardStats,
     refreshManagedUsers,
     runAction,
+    appToast,
+    dismissToast: () => setAppToast(null),
     statusMessage,
     isPending
   };

@@ -2,7 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useAppContext } from "../context";
 
 export default function Layout() {
-  const { currentUser, logout } = useAppContext();
+  const { currentUser, logout, appToast, dismissToast } = useAppContext();
   const isAdmin = currentUser?.type === "ADMIN";
   const isEmployee = currentUser?.type === "EMPLOYEE";
   const isCompany = currentUser?.type === "COMPANY";
@@ -36,6 +36,19 @@ export default function Layout() {
       <section className="content">
         <Outlet />
       </section>
+      {appToast ? (
+        <div className={`snackbar snackbar--${appToast.variant}`} role="status" aria-live="polite">
+          <span className="snackbar__msg">{appToast.message}</span>
+          <button
+            type="button"
+            className="snackbar__close"
+            onClick={dismissToast}
+            aria-label="Dismiss notification"
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
     </main>
   );
 }

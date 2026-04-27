@@ -65,25 +65,35 @@ export default function CompanyBackupManagementPage() {
           Upload a ZIP backup. The file is stored on the server under the project&apos;s{" "}
           <code>backups/company</code> folder and the full path is saved on the record.
         </p>
-        <div className="row">
+        <div className="upload-field-grid">
+          <label htmlFor="company-backup-file">Backup File (ZIP)</label>
           <input
+            id="company-backup-file"
             ref={fileInputRef}
             type="file"
             accept=".zip,application/zip"
             onChange={(e) => setPendingFile(e.target.files?.[0] ?? null)}
           />
+
+          <label htmlFor="company-payment-attachment">Attachment (Payment Screenshot)</label>
           <input
+            id="company-payment-attachment"
             ref={paymentInputRef}
             type="file"
             accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
             onChange={(e) => setPaymentScreenshot(e.target.files?.[0] ?? null)}
           />
+
+          <label htmlFor="company-upload-remarks">Remarks</label>
           <input
+            id="company-upload-remarks"
             type="text"
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
-            placeholder="Upload remarks"
+            placeholder="Enter remarks for this upload"
           />
+        </div>
+        <div className="row">
           <button
             onClick={() =>
               runAction(async () => {
@@ -227,7 +237,30 @@ export default function CompanyBackupManagementPage() {
               <dd>{selectedBackup.company_remarks || "-"}</dd>
               <dt>Payment Screenshot Path</dt>
               <dd>
-                <span className="path-block">{selectedBackup.payment_screenshot_path || "-"}</span>
+                <div className="row path-with-action">
+                  <span className="path-block">{selectedBackup.payment_screenshot_path || "-"}</span>
+                  <button
+                    className="secondary btn-icon"
+                    aria-label="Download payment attachment"
+                    title="Download Payment Attachment"
+                    disabled={!selectedBackup.payment_screenshot_path}
+                    onClick={() =>
+                      runAction(async () => {
+                        const { blob, filename } = await fetchBackupFile(
+                          `/api/backups/${selectedBackup.id}/payment-attachment-download`,
+                          session,
+                          {
+                            defaultFilename: "payment-attachment.png",
+                            fallbackPath: selectedBackup.payment_screenshot_path
+                          }
+                        );
+                        triggerBrowserDownload(blob, filename);
+                      }, "Payment attachment download started")
+                    }
+                  >
+                    <DownloadIcon />
+                  </button>
+                </div>
               </dd>
             </dl>
           </section>

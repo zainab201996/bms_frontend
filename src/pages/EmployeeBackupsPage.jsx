@@ -238,6 +238,33 @@ export default function EmployeeBackupsPage() {
                   </button>
                 </div>
               </dd>
+              <dt>Payment Screenshot Path</dt>
+              <dd>
+                <div className="row path-with-action">
+                  <span className="path-block">{selectedBackup.payment_screenshot_path || "-"}</span>
+                  <button
+                    className="secondary btn-icon"
+                    aria-label="Download payment attachment"
+                    title="Download Payment Attachment"
+                    disabled={!selectedBackup.payment_screenshot_path}
+                    onClick={() =>
+                      runAction(async () => {
+                        const { blob, filename } = await fetchBackupFile(
+                          `/api/backups/${selectedBackup.id}/payment-attachment-download`,
+                          session,
+                          {
+                            defaultFilename: "payment-attachment.png",
+                            fallbackPath: selectedBackup.payment_screenshot_path
+                          }
+                        );
+                        triggerBrowserDownload(blob, filename);
+                      }, `Downloaded payment attachment for backup ${selectedBackup.id}`)
+                    }
+                  >
+                    <DownloadIcon />
+                  </button>
+                </div>
+              </dd>
             </dl>
           </section>
         </div>

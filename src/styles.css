@@ -2,6 +2,10 @@
   font-family: "Inter", "Segoe UI", Arial, sans-serif;
   color: #e6edf7;
   background: #0b1220;
+  color-scheme: dark;
+  --scrollbar-track: #0f172acc;
+  --scrollbar-thumb: #364767;
+  --scrollbar-thumb-hover: #4b63a0;
 }
 
 * {
@@ -15,6 +19,43 @@ body {
     radial-gradient(1200px 500px at -10% -20%, #1d4ed855 0%, transparent 60%),
     radial-gradient(900px 450px at 120% -10%, #0ea5e955 0%, transparent 60%),
     linear-gradient(180deg, #0b1220 0%, #111a2f 100%);
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+@supports selector(::-webkit-scrollbar) {
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 999px;
+    border: 2px solid var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --scrollbar-track: #e8edf7;
+    --scrollbar-thumb: #9aa8c4;
+    --scrollbar-thumb-hover: #7f93b8;
+  }
 }
 
 .app-shell {
@@ -172,6 +213,20 @@ button.danger {
   gap: 10px;
   margin-top: 8px;
   max-width: 560px;
+}
+
+.upload-field-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  max-width: 700px;
+}
+
+.upload-field-grid label {
+  font-size: 0.85rem;
+  color: #a9bde4;
+  font-weight: 600;
 }
 
 .nav {
@@ -432,6 +487,7 @@ button.danger {
   display: grid;
   place-items: center;
   padding: 16px;
+  overflow-y: auto;
 }
 
 .modal-card {
@@ -440,6 +496,8 @@ button.danger {
   border-radius: 14px;
   padding: 16px;
   background: #0f172acc;
+  max-height: calc(100vh - 32px);
+  overflow: auto;
 }
 
 .user-edit-modal {
@@ -582,6 +640,15 @@ button.btn-icon svg {
   width: 140px;
   min-width: 140px;
   max-width: 140px;
+}
+
+.username-cell {
+  width: 180px;
+  min-width: 180px;
+  max-width: 180px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .modal-links {

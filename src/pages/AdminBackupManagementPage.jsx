@@ -224,7 +224,30 @@ export default function AdminBackupManagementPage() {
               <dd>{selectedBackup.company_remarks || "—"}</dd>
               <dt>Payment screenshot (server path)</dt>
               <dd>
-                <code className="path-block">{selectedBackup.payment_screenshot_path || "—"}</code>
+                <div className="row path-with-action">
+                  <code className="path-block">{selectedBackup.payment_screenshot_path || "—"}</code>
+                  <button
+                    className="secondary btn-icon"
+                    disabled={!selectedBackup.payment_screenshot_path}
+                    onClick={() =>
+                      runAction(async () => {
+                        const { blob, filename } = await fetchBackupFile(
+                          `/api/backups/${selectedBackup.id}/payment-attachment-download`,
+                          session,
+                          {
+                            defaultFilename: "payment-attachment.png",
+                            fallbackPath: selectedBackup.payment_screenshot_path
+                          }
+                        );
+                        triggerBrowserDownload(blob, filename);
+                      }, `Downloaded payment attachment for backup ${selectedBackup.id}`)
+                    }
+                    title="Download Payment Attachment"
+                    aria-label="Download payment attachment"
+                  >
+                    <DownloadIcon />
+                  </button>
+                </div>
               </dd>
             </dl>
             <p className="muted small">
