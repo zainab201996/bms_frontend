@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchBackupFile, fetchWithAuth, triggerBrowserDownload, tryFileUrlFromPath } from "../api";
+import { fetchBackupFile, fetchWithAuth, triggerBrowserDownload } from "../api";
 import { useAppContext } from "../context";
 
 function EyeIcon() {
@@ -42,17 +42,56 @@ function CloseIcon() {
   );
 }
 
+function StatusBadge({ status }) {
+  const cls = `status-badge status-${String(status || "").toLowerCase()}`;
+  return <span className={cls}>{status || "-"}</span>;
+}
+
 export default function AdminBackupManagementPage() {
   const { session, backups, refreshBackups, runAction } = useAppContext();
   const [remarksById, setRemarksById] = useState({});
   const [selectedBackup, setSelectedBackup] = useState(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [paymentPreviewUrl, setPaymentPreviewUrl] = useState("");
 
   useEffect(() => {
     refreshBackups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const pendingBackups = backups.filter((backup) => backup.status === "PENDING");
+  useEffect(() => {
+    setPaymentPreviewUrl("");
+    if (!selectedBackup?.payment_screenshot_path) return undefined;
+    let cancelled = false;
+    let objectUrl = "";
+    fetchBackupFile(`/api/backups/${selectedBackup.id}/payment-attachment-download`, session, {
+      defaultFilename: "payment-attachment.png"
+    })
+      .then(({ blob }) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPaymentPreviewUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setPaymentPreviewUrl("");
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedBackup, session]);
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredBackups = backups.filter((backup) => {
+    const statusMatch = statusFilter === "ALL" || backup.status === statusFilter;
+    if (!statusMatch) return false;
+    if (!normalizedSearch) return true;
+    const companyName = (backup.company_name || "").toLowerCase();
+    return String(backup.id).includes(normalizedSearch) || companyName.includes(normalizedSearch);
+  });
+  const pendingBackups = filteredBackups.filter((backup) => backup.status === "PENDING");
 
   const reviewBackup = (backup, status) => {
     const remarks = remarksById[backup.id] || "";
@@ -85,6 +124,21 @@ export default function AdminBackupManagementPage() {
       <section className="panel">
         <h2>Admin Backup Management</h2>
         <p className="muted">Approve or reject pending backups and inspect backup details in the modal.</p>
+        <div className="row">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by backup id or company"
+          />
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="ALL">All statuses</option>
+            <option value="PENDING">PENDING</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="REJECTED">REJECTED</option>
+            <option value="SUBMITTED">SUBMITTED</option>
+          </select>
+        </div>
       </section>
 
       <section className="panel">
@@ -95,7 +149,7 @@ export default function AdminBackupManagementPage() {
               <tr>
                 <th>ID</th>
                 <th>Company</th>
-                <th>File</th>
+                <th>Status</th>
                 <th>Remarks</th>
                 <th>Actions</th>
               </tr>
@@ -112,7 +166,7 @@ export default function AdminBackupManagementPage() {
                   <tr key={backup.id}>
                     <td>{backup.id}</td>
                     <td>{backup.company_name || ""}</td>
-                    <td className="path-cell">{backup.file_path}</td>
+                    <td><StatusBadge status={backup.status} /></td>
                     <td>
                       <input
                         value={remarksById[backup.id] || ""}
@@ -147,21 +201,17 @@ export default function AdminBackupManagementPage() {
                 <th>Company</th>
                 <th>Renewed By</th>
                 <th>Status</th>
-                <th>Original</th>
-                <th>Renewed</th>
                 <th>Company Remarks</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {backups.map((backup) => (
+              {filteredBackups.map((backup) => (
                 <tr key={backup.id}>
                   <td>{backup.id}</td>
                   <td>{backup.company_name || ""}</td>
                   <td>{backup.renewed_by_name || ""}</td>
-                  <td>{backup.status}</td>
-                  <td className="path-cell">{backup.file_path}</td>
-                  <td className="path-cell">{backup.renewed_file_path || "-"}</td>
+                  <td><StatusBadge status={backup.status} /></td>
                   <td>{backup.company_remarks || "-"}</td>
                   <td className="table-actions">
                     <button className="secondary btn-icon table-action-btn" onClick={() => setSelectedBackup(backup)} title="View">
@@ -194,22 +244,24 @@ export default function AdminBackupManagementPage() {
                 </>
               ) : null}
               <dt>Status</dt>
-              <dd>{selectedBackup.status}</dd>
+              <dd><StatusBadge status={selectedBackup.status} /></dd>
               <dt>Remarks</dt>
               <dd>{selectedBackup.remarks || "—"}</dd>
-              <dt>Original file (server path)</dt>
+              <dt>Original file</dt>
               <dd>
                 <div className="row path-with-action">
-                  <code className="path-block">{selectedBackup.file_path}</code>
+                  <span className="path-block">Original file available for secure download.</span>
                   <button className="secondary btn-icon" onClick={() => downloadOriginal(selectedBackup)} title="Download Company ZIP">
                     <DownloadIcon />
                   </button>
                 </div>
               </dd>
-              <dt>Renewed file (server path)</dt>
+              <dt>Renewed file</dt>
               <dd>
                 <div className="row path-with-action">
-                  <code className="path-block">{selectedBackup.renewed_file_path || "—"}</code>
+                  <span className="path-block">
+                    {selectedBackup.renewed_file_path ? "Renewed file available for secure download." : "—"}
+                  </span>
                   <button
                     className="secondary btn-icon"
                     disabled={!selectedBackup.renewed_file_path}
@@ -222,10 +274,16 @@ export default function AdminBackupManagementPage() {
               </dd>
               <dt>Company remarks</dt>
               <dd>{selectedBackup.company_remarks || "—"}</dd>
-              <dt>Payment screenshot (server path)</dt>
+              <dt>Payment screenshot</dt>
               <dd>
-                <div className="row path-with-action">
-                  <code className="path-block">{selectedBackup.payment_screenshot_path || "—"}</code>
+                <div className="payment-preview-wrap">
+                  {paymentPreviewUrl ? (
+                    <img src={paymentPreviewUrl} alt={`Payment proof for backup ${selectedBackup.id}`} className="payment-preview-image" />
+                  ) : (
+                    <span className="path-block">
+                      {selectedBackup.payment_screenshot_path ? "Loading screenshot preview..." : "—"}
+                    </span>
+                  )}
                   <button
                     className="secondary btn-icon"
                     disabled={!selectedBackup.payment_screenshot_path}
@@ -234,10 +292,7 @@ export default function AdminBackupManagementPage() {
                         const { blob, filename } = await fetchBackupFile(
                           `/api/backups/${selectedBackup.id}/payment-attachment-download`,
                           session,
-                          {
-                            defaultFilename: "payment-attachment.png",
-                            fallbackPath: selectedBackup.payment_screenshot_path
-                          }
+                          { defaultFilename: "payment-attachment.png" }
                         );
                         triggerBrowserDownload(blob, filename);
                       }, `Downloaded payment attachment for backup ${selectedBackup.id}`)
@@ -250,26 +305,6 @@ export default function AdminBackupManagementPage() {
                 </div>
               </dd>
             </dl>
-            <p className="muted small">
-              If the browser runs on the same PC as the server, you can try opening the path directly (often blocked by
-              the browser for security):
-            </p>
-            <div className="row modal-links">
-              {tryFileUrlFromPath(selectedBackup.file_path) ? (
-                <a href={tryFileUrlFromPath(selectedBackup.file_path)} target="_blank" rel="noopener noreferrer">
-                  Try open original path
-                </a>
-              ) : null}
-              {selectedBackup.renewed_file_path && tryFileUrlFromPath(selectedBackup.renewed_file_path) ? (
-                <a
-                  href={tryFileUrlFromPath(selectedBackup.renewed_file_path)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Try open renewed path
-                </a>
-              ) : null}
-            </div>
           </div>
         </div>
       ) : null}

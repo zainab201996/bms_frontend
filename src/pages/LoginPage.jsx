@@ -5,8 +5,8 @@ import { useAppContext } from "../context";
 export default function LoginPage() {
   const { login } = useAppContext();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("Test@1234");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 

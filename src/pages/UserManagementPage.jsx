@@ -156,6 +156,31 @@ export default function UserManagementPage() {
     setEditUser(null);
   }
 
+  function resetPasswordForUser(user) {
+    runAction(async () => {
+      if (user.type !== "COMPANY" && user.type !== "EMPLOYEE") {
+        throw new Error("Password reset is only allowed for company and employee users");
+      }
+      const response = await fetchWithAuth(`/api/users/${user.id}/reset-password`, session, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      const resetUser = response?.user;
+      if (!resetUser) {
+        throw new Error("Reset password response is invalid");
+      }
+      setLatestCredentials((prev) => [resetUser, ...(prev || [])]);
+      setCredentialsToast({
+        title: "Password reset successful",
+        users: [resetUser]
+      });
+      setSnackbar({
+        variant: "success",
+        message: `Password reset for ${user.name}. Share new temporary password securely.`
+      });
+    }, "User password reset");
+  }
+
   return (
     <>
       <CredentialsToast
@@ -212,7 +237,7 @@ export default function UserManagementPage() {
               <tr>
                 <th>ID</th>
                 <th>Name</th>
-                <th>Email</th>
+                <th className="email-cell">Email</th>
                 <th>Type</th>
                 <th>Username</th>
                 <th>Address</th>
@@ -234,7 +259,7 @@ export default function UserManagementPage() {
                     <tr key={user.id}>
                       <td>{user.id}</td>
                       <td>{user.name}</td>
-                      <td>{user.email}</td>
+                      <td className="email-cell">{user.email}</td>
                       <td>{user.type}</td>
                       <td className="username-cell">{user.username}</td>
                       <td>{user.location || "-"}</td>
@@ -242,6 +267,15 @@ export default function UserManagementPage() {
                         <button type="button" className="secondary table-action-btn" onClick={() => openEdit(user)}>
                           Edit
                         </button>
+                        {user.type === "COMPANY" || user.type === "EMPLOYEE" ? (
+                          <button
+                            type="button"
+                            className="secondary table-action-btn"
+                            onClick={() => resetPasswordForUser(user)}
+                          >
+                            Reset Password
+                          </button>
+                        ) : null}
                         {isSelf ? null : (
                           <button
                             type="button"

@@ -58,10 +58,16 @@ function CloseIcon() {
   );
 }
 
+function StatusBadge({ status }) {
+  const cls = `status-badge status-${String(status || "").toLowerCase()}`;
+  return <span className={cls}>{status || "-"}</span>;
+}
+
 export default function EmployeeBackupsPage() {
   const { session, currentUser, backups, refreshBackups, runAction } = useAppContext();
   const [renewedFileById, setRenewedFileById] = useState({});
   const [selectedBackupId, setSelectedBackupId] = useState(null);
+  const [paymentPreviewUrl, setPaymentPreviewUrl] = useState("");
   const fileInputRefs = useRef({});
   const currentUserId = Number(currentUser?.id);
   const visibleBackups = backups.filter(
@@ -73,6 +79,29 @@ export default function EmployeeBackupsPage() {
     refreshBackups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setPaymentPreviewUrl("");
+    if (!selectedBackup?.payment_screenshot_path) return undefined;
+    let cancelled = false;
+    let objectUrl = "";
+    fetchBackupFile(`/api/backups/${selectedBackup.id}/payment-attachment-download`, session, {
+      defaultFilename: "payment-attachment.png"
+    })
+      .then(({ blob }) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPaymentPreviewUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setPaymentPreviewUrl("");
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedBackup, session]);
 
   const setRenewedFile = (backupId, file) => {
     setRenewedFileById((prev) => {
@@ -88,8 +117,7 @@ export default function EmployeeBackupsPage() {
       <section className="panel">
         <h2>Employee Backups</h2>
         <p className="muted">
-          Download approved originals from the server, upload a renewed ZIP (stored under <code>backups/renewed</code>
-          ), then notify the company.
+          Download approved originals, upload renewed ZIP, then notify the company.
         </p>
       </section>
       <section className="panel">
@@ -101,8 +129,8 @@ export default function EmployeeBackupsPage() {
                 <th>Company</th>
                 <th>Renewed By</th>
                 <th>Status</th>
-                <th>Original path</th>
-                <th>Renewed path</th>
+                <th>Original</th>
+                <th>Renewed</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -119,11 +147,37 @@ export default function EmployeeBackupsPage() {
                     <td>{backup.id}</td>
                     <td>{backup.company_name || ""}</td>
                     <td>{backup.renewed_by_name || ""}</td>
-                    <td>{backup.status}</td>
-                    <td className="path-cell">{backup.file_path}</td>
+                    <td><StatusBadge status={backup.status} /></td>
+                    <td className="path-cell">
+                      <button
+                        className="secondary"
+                        onClick={() =>
+                          runAction(async () => {
+                            const { blob, filename } = await fetchBackupFile(`/api/backups/${backup.id}/download`, session);
+                            triggerBrowserDownload(blob, filename);
+                          }, `Downloaded backup ${backup.id}`)
+                        }
+                      >
+                        Download
+                      </button>
+                    </td>
                     <td className="path-cell">
                       {backup.status === "SUBMITTED" ? (
-                        <span className="path-cell-inline">{backup.renewed_file_path || "-"}</span>
+                        <button
+                          className="secondary"
+                          disabled={!backup.renewed_file_path}
+                          onClick={() =>
+                            runAction(async () => {
+                              const { blob, filename } = await fetchBackupFile(
+                                `/api/backups/${backup.id}/renewed-download`,
+                                session
+                              );
+                              triggerBrowserDownload(blob, filename);
+                            }, `Downloaded renewed backup ${backup.id}`)
+                          }
+                        >
+                          Download
+                        </button>
                       ) : (
                         <input
                           className="path-cell-input"
@@ -188,15 +242,15 @@ export default function EmployeeBackupsPage() {
             </div>
             <dl className="backup-detail-grid">
               <dt>Status</dt>
-              <dd>{selectedBackup.status}</dd>
+              <dd><StatusBadge status={selectedBackup.status} /></dd>
               <dt>Company</dt>
               <dd>{selectedBackup.company_name || `Company #${selectedBackup.company_id}`}</dd>
               <dt>Submitted by Employee</dt>
               <dd>{selectedBackup.renewed_by_name || "-"}</dd>
-              <dt>Company ZIP path</dt>
+              <dt>Company ZIP</dt>
               <dd>
                 <div className="row path-with-action">
-                  <span className="path-block">{selectedBackup.file_path}</span>
+                  <span className="path-block">Original file available for secure download.</span>
                   <button
                     className="secondary btn-icon"
                     aria-label="Download company zip"
@@ -215,10 +269,12 @@ export default function EmployeeBackupsPage() {
                   </button>
                 </div>
               </dd>
-              <dt>Renewed ZIP path</dt>
+              <dt>Renewed ZIP</dt>
               <dd>
                 <div className="row path-with-action">
-                  <span className="path-block">{selectedBackup.renewed_file_path || "-"}</span>
+                  <span className="path-block">
+                    {selectedBackup.renewed_file_path ? "Renewed file available for secure download." : "-"}
+                  </span>
                   <button
                     className="secondary btn-icon"
                     aria-label="Download renewed zip"
@@ -238,10 +294,16 @@ export default function EmployeeBackupsPage() {
                   </button>
                 </div>
               </dd>
-              <dt>Payment Screenshot Path</dt>
+              <dt>Payment Screenshot</dt>
               <dd>
-                <div className="row path-with-action">
-                  <span className="path-block">{selectedBackup.payment_screenshot_path || "-"}</span>
+                <div className="payment-preview-wrap">
+                  {paymentPreviewUrl ? (
+                    <img src={paymentPreviewUrl} alt={`Payment proof for backup ${selectedBackup.id}`} className="payment-preview-image" />
+                  ) : (
+                    <span className="path-block">
+                      {selectedBackup.payment_screenshot_path ? "Loading screenshot preview..." : "-"}
+                    </span>
+                  )}
                   <button
                     className="secondary btn-icon"
                     aria-label="Download payment attachment"
@@ -252,10 +314,7 @@ export default function EmployeeBackupsPage() {
                         const { blob, filename } = await fetchBackupFile(
                           `/api/backups/${selectedBackup.id}/payment-attachment-download`,
                           session,
-                          {
-                            defaultFilename: "payment-attachment.png",
-                            fallbackPath: selectedBackup.payment_screenshot_path
-                          }
+                          { defaultFilename: "payment-attachment.png" }
                         );
                         triggerBrowserDownload(blob, filename);
                       }, `Downloaded payment attachment for backup ${selectedBackup.id}`)

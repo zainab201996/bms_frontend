@@ -46,12 +46,6 @@ export default function DashboardPage() {
         <section className="panel">
           <h2>Company Dashboard</h2>
           <p className="muted">Counts are based only on your company backups.</p>
-          <button
-            className="secondary"
-            onClick={() => runAction(async () => refreshBackups(), "Dashboard stats refreshed")}
-          >
-            Refresh Dashboard Stats
-          </button>
         </section>
       </>
     );
@@ -78,12 +72,6 @@ export default function DashboardPage() {
         <section className="panel">
           <h2>Employee Dashboard</h2>
           <p className="muted">Approved backups are available for renewal processing.</p>
-          <button
-            className="secondary"
-            onClick={() => runAction(async () => refreshBackups(), "Dashboard stats refreshed")}
-          >
-            Refresh Dashboard Stats
-          </button>
         </section>
       </>
     );
@@ -103,6 +91,20 @@ export default function DashboardPage() {
           <article className="stat-card">
             <span className="muted">Companies</span>
             <strong>{dashboardStats?.companyCount || 0}</strong>
+          </article>
+        </div>
+        <div className="stats-row stats-row--three">
+          <article className="stat-card">
+            <span className="muted">Total companies</span>
+            <strong>{dashboardStats?.companyCount || 0}</strong>
+          </article>
+          <article className="stat-card">
+            <span className="muted">No submission for exactly 1 year</span>
+            <strong>{dashboardStats?.companiesWithoutSubmissionForOneYear || 0}</strong>
+          </article>
+          <article className="stat-card">
+            <span className="muted">Companies with renewed backup</span>
+            <strong>{dashboardStats?.companiesWithRenewedBackup || 0}</strong>
           </article>
         </div>
         <div className="stats-row stats-row--four">

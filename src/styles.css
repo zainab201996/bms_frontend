@@ -642,10 +642,34 @@ button.btn-icon svg {
   max-width: 140px;
 }
 
+.payment-preview-wrap {
+  display: grid;
+  gap: 10px;
+}
+
+.payment-preview-image {
+  width: min(100%, 360px);
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid #2a395a;
+  background: #0b1220;
+  padding: 6px;
+}
+
 .username-cell {
   width: 180px;
   min-width: 180px;
   max-width: 180px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.email-cell {
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;

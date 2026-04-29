@@ -96,8 +96,43 @@ export default function BackupList() {
                   <td>
                     <span className={`status-badge status-${backup.status.toLowerCase()}`}>{backup.status}</span>
                   </td>
-                  <td className="path-cell">{backup.file_path}</td>
-                  <td className="path-cell">{backup.renewed_file_path || "-"}</td>
+                  <td className="path-cell">
+                    <button
+                      className="secondary btn-icon"
+                      aria-label={`Download company zip for backup ${backup.id}`}
+                      title="Download Company ZIP"
+                      onClick={() =>
+                        runAction(async () => {
+                          const { blob, filename } = await fetchBackupFile(
+                            `/api/backups/${backup.id}/download`,
+                            session
+                          );
+                          triggerBrowserDownload(blob, filename);
+                        }, "Original backup download started")
+                      }
+                    >
+                      <DownloadIcon />
+                    </button>
+                  </td>
+                  <td className="path-cell">
+                    <button
+                      className="secondary btn-icon"
+                      aria-label={`Download renewed zip for backup ${backup.id}`}
+                      title="Download Renewed ZIP"
+                      disabled={!backup.renewed_file_path}
+                      onClick={() =>
+                        runAction(async () => {
+                          const { blob, filename } = await fetchBackupFile(
+                            `/api/backups/${backup.id}/renewed-download`,
+                            session
+                          );
+                          triggerBrowserDownload(blob, filename);
+                        }, "Renewed backup download started")
+                      }
+                    >
+                      <DownloadIcon />
+                    </button>
+                  </td>
                   <td>{backup.remarks || "-"}</td>
                   <td>{new Date(backup.updated_at).toLocaleString()}</td>
                   <td className="table-actions">
@@ -134,10 +169,9 @@ export default function BackupList() {
               <dd>{selectedBackup.company_name || `Company #${selectedBackup.company_id}`}</dd>
               <dt>Submitted by Employee</dt>
               <dd>{selectedBackup.renewed_by_name || "-"}</dd>
-              <dt>Company ZIP path</dt>
+              <dt>Company ZIP</dt>
               <dd>
                 <div className="row path-with-action">
-                  <span className="path-block">{selectedBackup.file_path}</span>
                   <button
                     className="secondary btn-icon"
                     aria-label="Download company zip"
@@ -156,10 +190,9 @@ export default function BackupList() {
                   </button>
                 </div>
               </dd>
-              <dt>Renewed ZIP path</dt>
+              <dt>Renewed ZIP</dt>
               <dd>
                 <div className="row path-with-action">
-                  <span className="path-block">{selectedBackup.renewed_file_path || "-"}</span>
                   <button
                     className="secondary btn-icon"
                     aria-label="Download renewed zip"

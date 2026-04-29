@@ -42,6 +42,11 @@ function CloseIcon() {
   );
 }
 
+function StatusBadge({ status }) {
+  const cls = `status-badge status-${String(status || "").toLowerCase()}`;
+  return <span className={cls}>{status || "-"}</span>;
+}
+
 export default function CompanyBackupManagementPage() {
   const { session, backups, refreshBackups, runAction } = useAppContext();
   const fileInputRef = useRef(null);
@@ -62,26 +67,27 @@ export default function CompanyBackupManagementPage() {
       <section className="panel">
         <h2>Company Backup Management</h2>
         <p className="muted">
-          Upload a ZIP backup. The file is stored on the server under the project&apos;s{" "}
-          <code>backups/company</code> folder and the full path is saved on the record.
+          Attach payment screenshot first, then upload backup ZIP.
         </p>
         <div className="upload-field-grid">
+          <label htmlFor="company-payment-attachment">Attachment (Payment Screenshot)</label>
+          <input
+            id="company-payment-attachment"
+            ref={paymentInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.webp,application/pdf,image/jpeg,image/webp"
+            onChange={(e) => setPaymentScreenshot(e.target.files?.[0] ?? null)}
+          />
+
           <label htmlFor="company-backup-file">Backup File (ZIP)</label>
           <input
             id="company-backup-file"
             ref={fileInputRef}
             type="file"
             accept=".zip,application/zip"
+            disabled={!paymentScreenshot}
+            title={!paymentScreenshot ? "Payment screenshot is mandatory before adding backup ZIP." : "Select backup ZIP file"}
             onChange={(e) => setPendingFile(e.target.files?.[0] ?? null)}
-          />
-
-          <label htmlFor="company-payment-attachment">Attachment (Payment Screenshot)</label>
-          <input
-            id="company-payment-attachment"
-            ref={paymentInputRef}
-            type="file"
-            accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
-            onChange={(e) => setPaymentScreenshot(e.target.files?.[0] ?? null)}
           />
 
           <label htmlFor="company-upload-remarks">Remarks</label>
@@ -95,12 +101,14 @@ export default function CompanyBackupManagementPage() {
         </div>
         <div className="row">
           <button
+            disabled={!paymentScreenshot || !pendingFile}
             onClick={() =>
               runAction(async () => {
                 if (!pendingFile) throw new Error("Please choose a ZIP file");
+                if (!paymentScreenshot) throw new Error("Please attach payment screenshot first");
                 const formData = new FormData();
                 formData.append("file", pendingFile);
-                if (paymentScreenshot) formData.append("paymentScreenshot", paymentScreenshot);
+                formData.append("paymentScreenshot", paymentScreenshot);
                 formData.append("remarks", remarks.trim());
                 await uploadZipWithAuth("/api/backups", session, formData);
                 setPendingFile(null);
@@ -127,8 +135,6 @@ export default function CompanyBackupManagementPage() {
                 <th>Company</th>
                 <th>Renewed By</th>
                 <th>Status</th>
-                <th>Original</th>
-                <th>Renewed</th>
                 <th>Admin Remarks</th>
                 <th>Company Remarks</th>
                 <th>Action</th>
@@ -137,7 +143,7 @@ export default function CompanyBackupManagementPage() {
             <tbody>
               {backups.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="muted">
+                  <td colSpan="7" className="muted">
                     No backups uploaded yet.
                   </td>
                 </tr>
@@ -147,9 +153,7 @@ export default function CompanyBackupManagementPage() {
                     <td>{backup.id}</td>
                     <td>{backup.company_name || ""}</td>
                     <td>{backup.renewed_by_name || ""}</td>
-                    <td>{backup.status}</td>
-                    <td className="path-cell">{backup.file_path}</td>
-                    <td className="path-cell">{backup.renewed_file_path || "-"}</td>
+                    <td><StatusBadge status={backup.status} /></td>
                     <td>{backup.remarks || "-"}</td>
                     <td>{backup.company_remarks || "-"}</td>
                     <td className="table-actions">
@@ -182,7 +186,7 @@ export default function CompanyBackupManagementPage() {
             </div>
             <dl className="backup-detail-grid">
               <dt>Status</dt>
-              <dd>{selectedBackup.status}</dd>
+              <dd><StatusBadge status={selectedBackup.status} /></dd>
               <dt>Company</dt>
               <dd>{selectedBackup.company_name || `Company #${selectedBackup.company_id}`}</dd>
               {selectedBackup.renewed_by ? (
@@ -191,10 +195,10 @@ export default function CompanyBackupManagementPage() {
                   <dd>{selectedBackup.renewed_by_name || `Employee #${selectedBackup.renewed_by}`}</dd>
                 </>
               ) : null}
-              <dt>Company ZIP path</dt>
+              <dt>Company ZIP</dt>
               <dd>
                 <div className="row path-with-action">
-                  <span className="path-block">{selectedBackup.file_path}</span>
+                  <span className="path-block">Original file available for secure download.</span>
                   <button
                     className="secondary btn-icon"
                     aria-label="Download company zip"
@@ -210,10 +214,12 @@ export default function CompanyBackupManagementPage() {
                   </button>
                 </div>
               </dd>
-              <dt>Renewed ZIP path</dt>
+              <dt>Renewed ZIP</dt>
               <dd>
                 <div className="row path-with-action">
-                  <span className="path-block">{selectedBackup.renewed_file_path || "-"}</span>
+                  <span className="path-block">
+                    {selectedBackup.renewed_file_path ? "Renewed file available for secure download." : "-"}
+                  </span>
                   <button
                     className="secondary btn-icon"
                     aria-label="Download renewed zip"
@@ -235,10 +241,12 @@ export default function CompanyBackupManagementPage() {
               </dd>
               <dt>Company Remarks</dt>
               <dd>{selectedBackup.company_remarks || "-"}</dd>
-              <dt>Payment Screenshot Path</dt>
+              <dt>Payment Attachment</dt>
               <dd>
                 <div className="row path-with-action">
-                  <span className="path-block">{selectedBackup.payment_screenshot_path || "-"}</span>
+                  <span className="path-block">
+                    {selectedBackup.payment_screenshot_path ? "Payment screenshot available for secure download." : "-"}
+                  </span>
                   <button
                     className="secondary btn-icon"
                     aria-label="Download payment attachment"
@@ -249,10 +257,7 @@ export default function CompanyBackupManagementPage() {
                         const { blob, filename } = await fetchBackupFile(
                           `/api/backups/${selectedBackup.id}/payment-attachment-download`,
                           session,
-                          {
-                            defaultFilename: "payment-attachment.png",
-                            fallbackPath: selectedBackup.payment_screenshot_path
-                          }
+                          { defaultFilename: "payment-attachment.png" }
                         );
                         triggerBrowserDownload(blob, filename);
                       }, "Payment attachment download started")
