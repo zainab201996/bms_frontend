@@ -145,7 +145,7 @@ export default function DashboardPage() {
             Refresh
           </button>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap table-wrap--fit">
           <table>
             <thead>
               <tr>

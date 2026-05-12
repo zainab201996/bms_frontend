@@ -62,6 +62,7 @@ body {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 280px 1fr;
+  min-width: 0;
 }
 
 .row {
@@ -152,6 +153,7 @@ button.danger {
   background: #ffffff14;
   backdrop-filter: blur(14px);
   box-shadow: 0 10px 35px rgba(5, 10, 20, 0.25);
+  min-width: 0;
 }
 
 .content {
@@ -338,6 +340,9 @@ button.danger {
   overflow-y: hidden;
   background: #0f172acc;
   max-width: 100%;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .table-wrap table {
@@ -345,6 +350,12 @@ button.danger {
   border-collapse: collapse;
   min-width: 760px;
   table-layout: fixed;
+}
+
+/* Few-column tables: size to content / panel width (no forced horizontal scroll) */
+.table-wrap--fit table {
+  min-width: 0;
+  table-layout: auto;
 }
 
 .table-wrap--spaced {
@@ -357,6 +368,7 @@ button.danger {
   padding: 10px 12px;
   border-bottom: 1px solid #ffffff18;
   color: #dbe7ff;
+  vertical-align: top;
 }
 
 .table-wrap th {
@@ -393,30 +405,6 @@ button.danger {
 .status-submitted {
   background: #3b82f630;
   color: #bfdbfe;
-}
-
-.company-stage-badge {
-  text-transform: capitalize;
-}
-
-.company-stage-onboarding {
-  background: #0ea5e936;
-  color: #bae6fd;
-}
-
-.company-stage-active {
-  background: #22c55e2a;
-  color: #86efac;
-}
-
-.company-stage-payment_pending {
-  background: #f59e0b2a;
-  color: #fcd34d;
-}
-
-.company-stage-suspended {
-  background: #ef44442b;
-  color: #fca5a5;
 }
 
 .muted {
@@ -911,6 +899,30 @@ p.small {
   }
 
   .stats-row--three {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-row--four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table-actions {
+    flex-wrap: wrap !important;
+    white-space: normal;
+  }
+
+  .table-wrap th,
+  .table-wrap td {
+    overflow-wrap: break-word;
+  }
+}
+
+@media (max-width: 520px) {
+  .stats-row--four {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-row--two {
     grid-template-columns: 1fr;
   }
 }

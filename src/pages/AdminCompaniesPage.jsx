@@ -2,14 +2,11 @@ import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../api";
 import { useAppContext } from "../context";
 
-const COMPANY_STAGES = ["ONBOARDING", "ACTIVE", "PAYMENT_PENDING", "SUSPENDED"];
-
 export default function AdminCompaniesPage() {
   const { session, runAction } = useAppContext();
   const [companies, setCompanies] = useState([]);
   const [editingCompany, setEditingCompany] = useState(null);
   const [softwareTypesInput, setSoftwareTypesInput] = useState("");
-  const [companyStage, setCompanyStage] = useState("ONBOARDING");
 
   async function loadCompanies() {
     const data = await fetchWithAuth("/api/users/companies", session);
@@ -24,7 +21,6 @@ export default function AdminCompaniesPage() {
   function openEditModal(company) {
     setEditingCompany(company);
     setSoftwareTypesInput((company.software_types || []).join(", "));
-    setCompanyStage(company.company_stage || "ONBOARDING");
   }
 
   function closeEditModal() {
@@ -37,7 +33,7 @@ export default function AdminCompaniesPage() {
         <div className="panel-header-with-action">
           <div>
             <h2 className="panel-page-title">Companies</h2>
-            <h3>Software types and current stage</h3>
+            <h3>Software types</h3>
           </div>
           <button className="secondary" type="button" onClick={() => runAction(loadCompanies, "Companies refreshed")}>
             Refresh
@@ -51,7 +47,6 @@ export default function AdminCompaniesPage() {
                 <th>Name</th>
                 <th>Email</th>
                 <th>Software Types</th>
-                <th>Stage</th>
                 <th>Address</th>
                 <th>Action</th>
               </tr>
@@ -59,7 +54,7 @@ export default function AdminCompaniesPage() {
             <tbody>
               {companies.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="muted">
+                  <td colSpan="6" className="muted">
                     No companies found.
                   </td>
                 </tr>
@@ -70,11 +65,6 @@ export default function AdminCompaniesPage() {
                     <td>{company.name}</td>
                     <td>{company.email}</td>
                     <td>{company.software_types?.join(", ") || "-"}</td>
-                    <td>
-                      <span className={`status-badge company-stage-badge company-stage-${(company.company_stage || "ONBOARDING").toLowerCase()}`}>
-                        {company.company_stage || "ONBOARDING"}
-                      </span>
-                    </td>
                     <td>{company.location || "-"}</td>
                     <td className="table-actions">
                       <button type="button" className="secondary table-action-btn" onClick={() => openEditModal(company)}>
@@ -102,15 +92,6 @@ export default function AdminCompaniesPage() {
                 placeholder="Peachtree, QuickBooks"
               />
 
-              <label htmlFor="companyStage">Company stage</label>
-              <select id="companyStage" value={companyStage} onChange={(event) => setCompanyStage(event.target.value)}>
-                {COMPANY_STAGES.map((stage) => (
-                  <option key={stage} value={stage}>
-                    {stage}
-                  </option>
-                ))}
-              </select>
-
               <div className="row modal-actions">
                 <button
                   type="button"
@@ -119,8 +100,7 @@ export default function AdminCompaniesPage() {
                       await fetchWithAuth(`/api/users/${editingCompany.id}`, session, {
                         method: "PATCH",
                         body: JSON.stringify({
-                          software_types: softwareTypesInput,
-                          company_stage: companyStage
+                          software_types: softwareTypesInput
                         })
                       });
                       closeEditModal();

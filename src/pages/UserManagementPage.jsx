@@ -3,8 +3,6 @@ import { fetchWithAuth } from "../api";
 import { useAppContext } from "../context";
 import CredentialsToast from "../components/CredentialsToast";
 
-const COMPANY_STAGES = ["ONBOARDING", "ACTIVE", "PAYMENT_PENDING", "SUSPENDED"];
-
 export default function UserManagementPage() {
   const {
     currentUser,
@@ -24,7 +22,6 @@ export default function UserManagementPage() {
   const [companyEmail, setCompanyEmail] = useState("");
   const [companyAddress, setCompanyAddress] = useState("");
   const [companySoftwareTypes, setCompanySoftwareTypes] = useState("");
-  const [companyStage, setCompanyStage] = useState("ONBOARDING");
   const [companyCreateMode, setCompanyCreateMode] = useState("FORM");
   const [companyCsvFile, setCompanyCsvFile] = useState(null);
   const [csvInputKey, setCsvInputKey] = useState(0);
@@ -60,7 +57,6 @@ export default function UserManagementPage() {
     setCompanyEmail("");
     setCompanyAddress("");
     setCompanySoftwareTypes("");
-    setCompanyStage("ONBOARDING");
     setCompanyCreateMode("FORM");
     setCompanyCsvFile(null);
     setCsvInputKey((k) => k + 1);
@@ -126,8 +122,7 @@ export default function UserManagementPage() {
           name: companyName,
           email: companyEmail,
           location: companyAddress,
-          software_types: companySoftwareTypes,
-          company_stage: companyStage
+          software_types: companySoftwareTypes
         })
       });
       setLatestCredentials([response.user]);
@@ -139,7 +134,6 @@ export default function UserManagementPage() {
       setCompanyEmail("");
       setCompanyAddress("");
       setCompanySoftwareTypes("");
-      setCompanyStage("ONBOARDING");
       await refreshManagedUsers();
       closeCreateModal();
     }, "Company user created");
@@ -420,24 +414,11 @@ export default function UserManagementPage() {
                         onChange={(e) => setCompanySoftwareTypes(e.target.value)}
                         placeholder="QuickBooks, Peachtree"
                       />
-
-                      <label htmlFor="companyStage">Company stage</label>
-                      <select
-                        id="companyStage"
-                        value={companyStage}
-                        onChange={(e) => setCompanyStage(e.target.value)}
-                      >
-                        {COMPANY_STAGES.map((stage) => (
-                          <option key={stage} value={stage}>
-                            {stage}
-                          </option>
-                        ))}
-                      </select>
                     </>
                   ) : (
                     <>
                       <p className="small span-full">
-                        CSV headers: <code>company_name,email,address,software_types,company_stage</code>
+                        CSV headers: <code>company_name,email,address,software_types</code>
                       </p>
                       <label htmlFor="companyCsv">CSV file</label>
                       <input
